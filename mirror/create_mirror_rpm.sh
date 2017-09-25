@@ -27,7 +27,7 @@ yum-config-manager --add-repo $CLOUDERA_MANAGER_REPO
 yum-config-manager --add-repo $SALT_REPO
 yum-config-manager --add-repo $AMBARI_REPO
 
-yum install -y createrepo
+yum install -y yum-plugin-downloadonly createrepo
 rm -rf $RPM_REPO_DIR
 mkdir -p $RPM_REPO_DIR
 
@@ -40,14 +40,15 @@ curl -LOJf $SALT_REPO_KEY
 curl -LOJf $SALT_REPO_KEY2
 curl -LOJf $AMBARI_REPO_KEY
 
-#TODO yumdownloader doesn't always seem to download the full set of packages, for instance if git is installed, it won't download perl
-# packages correctly maybe because git already installed them. repotrack is meant to be better but I couldn't get that working.
-# yumdownloader also doesn't set its exit code when a package is not found, so this scans the log output for this case and manually exits with an error
-(yumdownloader --resolve --archlist=x86_64 --destdir $RPM_REPO_DIR $RPM_PACKAGE_LIST 2>&1) | tee -a yum-downloader.log; cmd_result=${PIPESTATUS[0]} && if [ ${cmd_result} != '0' ]; then exit ${cmd_result}; fi
-if grep -q 'No Match for argument' "yum-downloader.log"; then
+RPM_CHROOT_DIR=/tmp/pnda_rpm_root/
+rm -rf $RPM_CHROOT_DIR
+mkdir $RPM_CHROOT_DIR
+
+(yum install --nogpg --downloadonly --downloaddir=$RPM_REPO_DIR --installroot=$RPM_CHROOT_DIR --releasever=/ --setopt=protected_multilib=false $RPM_PACKAGE_LIST 2>&1) | tee -a yum-download.log; cmd_result=${PIPESTATUS[0]} && if [ ${cmd_result} != '0' ]; then exit ${cmd_result}; fi
+if grep -q 'No package ' "yum-download.log"; then
     echo "missing rpm detected:"
-    echo $(cat yum-downloader.log | grep 'No Match for argument')
+    echo $(cat yum-download.log | grep 'No package ')
     exit -1
 fi
-rm yum-downloader.log
+rm yum-download.log
 createrepo --database $RPM_REPO_DIR
