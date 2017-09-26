@@ -51,12 +51,12 @@ echo "$RPM_PACKAGE_LIST" | wc -l
 echo "number of Cloudera RPMS:"
 echo "$RPM_PACKAGE_LIST_CM" | wc -l
 
-RPM_PACKAGE_LIST_DEPS=$(repoquery -a x86_64 --requires --resolve --recursive $RPM_PACKAGE_LIST)
+RPM_PACKAGE_LIST_DEPS=$(repoquery --arch=x86_64 --requires --resolve --recursive $RPM_PACKAGE_LIST)
 echo "number of non-Cloudera dependency RPMS:"
 echo "$RPM_PACKAGE_LIST_DEPS" | wc -l
 
 yum-config-manager --disable rhui-REGION-client-config-server-7 rhui-REGION-rhel-server-extras rhui-REGION-rhel-server-optional rhui-REGION-rhel-server-releases rhui-REGION-rhel-server-rh-common
-RPM_PACKAGE_LIST_DEPS_CM=$(repoquery -a x86_64 --requires --resolve --recursive $RPM_PACKAGE_LIST_CM)
+RPM_PACKAGE_LIST_DEPS_CM=$(repoquery --arch=x86_64 --requires --resolve --recursive $RPM_PACKAGE_LIST_CM)
 echo "number of Cloudera dependency RPMS:"
 echo "$RPM_PACKAGE_LIST_DEPS_CM" | wc -l
 yum-config-manager --enable rhui-REGION-client-config-server-7 rhui-REGION-rhel-server-extras rhui-REGION-rhel-server-optional rhui-REGION-rhel-server-releases rhui-REGION-rhel-server-rh-common
