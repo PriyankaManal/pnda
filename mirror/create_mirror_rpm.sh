@@ -51,12 +51,12 @@ echo "$RPM_PACKAGE_LIST" | wc -l
 echo "number of Cloudera RPMS:"
 echo "$RPM_PACKAGE_LIST_CM" | wc -l
 
-RPM_PACKAGE_LIST_DEPS=$(repoquery --arch=x86_64 --requires --resolve --recursive $RPM_PACKAGE_LIST)
+RPM_PACKAGE_LIST_DEPS=$(repoquery --arch=x86_64,noarch --requires --resolve --recursive $RPM_PACKAGE_LIST)
 echo "number of non-Cloudera dependency RPMS:"
 echo "$RPM_PACKAGE_LIST_DEPS" | wc -l
 
 yum-config-manager --disable rhui-REGION-client-config-server-7 rhui-REGION-rhel-server-extras rhui-REGION-rhel-server-optional rhui-REGION-rhel-server-releases rhui-REGION-rhel-server-rh-common
-RPM_PACKAGE_LIST_DEPS_CM=$(repoquery --arch=x86_64 --requires --resolve --recursive $RPM_PACKAGE_LIST_CM)
+RPM_PACKAGE_LIST_DEPS_CM=$(repoquery --arch=x86_64,noarch --requires --resolve --recursive $RPM_PACKAGE_LIST_CM)
 echo "number of Cloudera dependency RPMS:"
 echo "$RPM_PACKAGE_LIST_DEPS_CM" | wc -l
 yum-config-manager --enable rhui-REGION-client-config-server-7 rhui-REGION-rhel-server-extras rhui-REGION-rhel-server-optional rhui-REGION-rhel-server-releases rhui-REGION-rhel-server-rh-common
@@ -65,7 +65,7 @@ RPM_PACKAGE_LIST_ALL="$RPM_PACKAGE_LIST $RPM_PACKAGE_LIST_DEPS $RPM_PACKAGE_LIST
 RPM_PACKAGE_LIST_ALL=$(echo "$RPM_PACKAGE_LIST_ALL" | sort | uniq)
 echo "Total number of RPMS:"
 echo "$RPM_PACKAGE_LIST_ALL" | wc -l
-(yumdownloader --archlist=x86_64 --destdir $RPM_REPO_DIR $RPM_PACKAGE_LIST_ALL 2>&1) | tee -a yum-downloader.log; cmd_result=${PIPESTATUS[0]} && if [ ${cmd_result} != '0' ]; then exit ${cmd_result}; fi
+(yumdownloader --destdir $RPM_REPO_DIR $RPM_PACKAGE_LIST_ALL 2>&1) | tee -a yum-downloader.log; cmd_result=${PIPESTATUS[0]} && if [ ${cmd_result} != '0' ]; then exit ${cmd_result}; fi
 if grep -q 'No Match for argument' "yum-downloader.log"; then
     echo "missing rpm detected:"
     echo $(cat yum-downloader.log | grep 'No Match for argument')
