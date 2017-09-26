@@ -40,10 +40,32 @@ curl -LOJf $SALT_REPO_KEY
 curl -LOJf $SALT_REPO_KEY2
 curl -LOJf $AMBARI_REPO_KEY
 
-#TODO yumdownloader doesn't always seem to download the full set of packages, for instance if git is installed, it won't download perl
-# packages correctly maybe because git already installed them. repotrack is meant to be better but I couldn't get that working.
-# yumdownloader also doesn't set its exit code when a package is not found, so this scans the log output for this case and manually exits with an error
-(yumdownloader --resolve --archlist=x86_64 --destdir $RPM_REPO_DIR $RPM_PACKAGE_LIST 2>&1) | tee -a yum-downloader.log; cmd_result=${PIPESTATUS[0]} && if [ ${cmd_result} != '0' ]; then exit ${cmd_result}; fi
+# yumdownloader doesn't download dependencies that are already installed, for instance if git is installed, it won't download perl
+# To enumerate the dependencies reliably therefore, repoquery is used to generate the set of packages to download
+# Additionally, the cloudera packages cannot be processed by repoquery when the main repos are enabled (unsure as to the reason) so
+# these are handled separately, with the main repos disabled.
+RPM_PACKAGE_LIST_CM=$(echo "$RPM_PACKAGE_LIST" | grep cloudera)
+RPM_PACKAGE_LIST=$(echo "$RPM_PACKAGE_LIST" | grep -v cloudera)
+echo "number of non-Cloudera RPMS:"
+echo "$RPM_PACKAGE_LIST" | wc -l
+echo "number of Cloudera RPMS:"
+echo "$RPM_PACKAGE_LIST_CM" | wc -l
+
+RPM_PACKAGE_LIST_DEPS=$(repoquery -a x86_64 --requires --resolve --recursive $RPM_PACKAGE_LIST)
+echo "number of non-Cloudera dependency RPMS:"
+echo "$RPM_PACKAGE_LIST_DEPS" | wc -l
+
+yum-config-manager --disable rhui-REGION-client-config-server-7 rhui-REGION-rhel-server-extras rhui-REGION-rhel-server-optional rhui-REGION-rhel-server-releases rhui-REGION-rhel-server-rh-common
+RPM_PACKAGE_LIST_DEPS_CM=$(repoquery -a x86_64 --requires --resolve --recursive $RPM_PACKAGE_LIST_CM)
+echo "number of Cloudera dependency RPMS:"
+echo "$RPM_PACKAGE_LIST_DEPS_CM" | wc -l
+yum-config-manager --enable rhui-REGION-client-config-server-7 rhui-REGION-rhel-server-extras rhui-REGION-rhel-server-optional rhui-REGION-rhel-server-releases rhui-REGION-rhel-server-rh-common
+
+RPM_PACKAGE_LIST_ALL="$RPM_PACKAGE_LIST $RPM_PACKAGE_LIST_DEPS $RPM_PACKAGE_LIST_DEPS_CM"
+RPM_PACKAGE_LIST_ALL=$(echo "$RPM_PACKAGE_LIST_ALL" | sort | uniq)
+echo "Total number of RPMS:"
+echo "$RPM_PACKAGE_LIST_ALL" | wc -l
+(yumdownloader --archlist=x86_64 --destdir $RPM_REPO_DIR $RPM_PACKAGE_LIST_ALL 2>&1) | tee -a yum-downloader.log; cmd_result=${PIPESTATUS[0]} && if [ ${cmd_result} != '0' ]; then exit ${cmd_result}; fi
 if grep -q 'No Match for argument' "yum-downloader.log"; then
     echo "missing rpm detected:"
     echo $(cat yum-downloader.log | grep 'No Match for argument')

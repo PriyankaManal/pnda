@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - PNDA-3270: fix issue on Jupyter py2 deps
 - PNDA-3289: Detect errors when building mirror and set exit code
 - PNDA-3249: Upgrade Kafka version to 0.11.0.0
+- PNDA-3109: Use repoquery to calculate dependencies for RHEL mirror instead of the resolution function built into yumdownloader.
 
 ## [0.2.0] 2017-08-01
 ### Added
