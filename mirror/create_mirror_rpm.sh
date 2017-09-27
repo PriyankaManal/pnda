@@ -44,7 +44,7 @@ curl -LOJf $SALT_REPO_KEY2
 curl -LOJf $AMBARI_REPO_KEY
 
 # yumdownloader doesn't set its exit code when a package is not found, so this scans the log output for this case and manually exits with an error
-(yumdownloader --installroot=$CHROOT_DIR --resolve --archlist=x86_64 --destdir $RPM_REPO_DIR $RPM_PACKAGE_LIST 2>&1) | tee -a yum-downloader.log; cmd_result=${PIPESTATUS[0]} && if [ ${cmd_result} != '0' ]; then exit ${cmd_result}; fi
+(yumdownloader --installroot=$CHROOT_DIR --releasever=/ --resolve --archlist=x86_64 --destdir $RPM_REPO_DIR $RPM_PACKAGE_LIST 2>&1) | tee -a yum-downloader.log; cmd_result=${PIPESTATUS[0]} && if [ ${cmd_result} != '0' ]; then exit ${cmd_result}; fi
 if grep -q 'No Match for argument' "yum-downloader.log"; then
     echo "missing rpm detected:"
     echo $(cat yum-downloader.log | grep 'No Match for argument')
