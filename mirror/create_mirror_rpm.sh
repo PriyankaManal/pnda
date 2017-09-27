@@ -7,6 +7,8 @@ export DISTRO=$(cat /etc/*-release|grep ^ID\=|awk -F\= {'print $2'}|sed s/\"//g)
 RPM_PACKAGE_LIST=$(<${MIRROR_BUILD_DIR}/dependencies/pnda-rpm-package-dependencies.txt)
 
 RPM_REPO_DIR=$MIRROR_OUTPUT_DIR/mirror_rpm
+CHROOT_DIR=$MIRROR_OUTPUT_DIR/yumroot/
+
 RPM_EXTRAS=rhui-REGION-rhel-server-extras
 RPM_OPTIONAL=rhui-REGION-rhel-server-optional
 RPM_EPEL=https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -30,6 +32,7 @@ yum-config-manager --add-repo $AMBARI_REPO
 yum install -y createrepo
 rm -rf $RPM_REPO_DIR
 mkdir -p $RPM_REPO_DIR
+mkdir -p $CHROOT_DIR
 
 cd $RPM_REPO_DIR
 cp /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7 $RPM_REPO_DIR
@@ -40,10 +43,8 @@ curl -LOJf $SALT_REPO_KEY
 curl -LOJf $SALT_REPO_KEY2
 curl -LOJf $AMBARI_REPO_KEY
 
-#TODO yumdownloader doesn't always seem to download the full set of packages, for instance if git is installed, it won't download perl
-# packages correctly maybe because git already installed them. repotrack is meant to be better but I couldn't get that working.
-# yumdownloader also doesn't set its exit code when a package is not found, so this scans the log output for this case and manually exits with an error
-(yumdownloader --resolve --archlist=x86_64 --destdir $RPM_REPO_DIR $RPM_PACKAGE_LIST 2>&1) | tee -a yum-downloader.log; cmd_result=${PIPESTATUS[0]} && if [ ${cmd_result} != '0' ]; then exit ${cmd_result}; fi
+# yumdownloader doesn't set its exit code when a package is not found, so this scans the log output for this case and manually exits with an error
+(yumdownloader --installroot=$CHROOT_DIR --resolve --archlist=x86_64 --destdir $RPM_REPO_DIR $RPM_PACKAGE_LIST 2>&1) | tee -a yum-downloader.log; cmd_result=${PIPESTATUS[0]} && if [ ${cmd_result} != '0' ]; then exit ${cmd_result}; fi
 if grep -q 'No Match for argument' "yum-downloader.log"; then
     echo "missing rpm detected:"
     echo $(cat yum-downloader.log | grep 'No Match for argument')
